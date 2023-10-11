@@ -1,4 +1,0 @@
-# isucon
-# isucon
-# isucon
-# isucon
