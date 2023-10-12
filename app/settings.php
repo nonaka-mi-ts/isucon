@@ -12,7 +12,7 @@ return function (ContainerBuilder $containerBuilder) {
     // Global Settings Object
     $containerBuilder->addDefinitions([
         SettingsInterface::class => function () {
-            return new Settings([
+            return new Settings([ 
                 'displayErrorDetails' => false, // Should be set to false in production
                 'logError'            => true,
                 'logErrorDetails'     => true,
