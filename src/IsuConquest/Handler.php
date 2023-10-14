@@ -342,7 +342,7 @@ final class Handler
             $this->loginBonusGranted($userID, $requestAt, $bonus->id, $userBonus->lastRewardSequence);
 
             // 進捗の保存
-            // user_login_bonusesにレコードがないユーザー(初ログインのユーザー)の場合
+            // user_login_bonusesにレコードがないユーザー(初ログイン？ボーナスを1つも持っていないユーザー)の場合
             if ($initBonus) {
                 $query = 'INSERT INTO user_login_bonuses(id, user_id, login_bonus_id, last_reward_sequence, loop_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)';
                 $stmt = $this->db->prepare($query);
