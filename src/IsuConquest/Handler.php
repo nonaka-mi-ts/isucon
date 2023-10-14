@@ -292,9 +292,11 @@ final class Handler
         /** @var list<UserLoginBonus> $sendLoginBonuses */
         $sendLoginBonuses = [];
 
+        //  login_bonusは4つ=4ループする
         foreach ($loginBonuses as $bonus) {
             $initBonus = false;
             // ボーナスの進捗取得
+            // $bonus=1のものしかuser_login_bonusesにはない
             $query = 'SELECT * FROM user_login_bonuses WHERE user_id=? AND login_bonus_id=?';
             $stmt = $this->db->prepare($query);
             $stmt->bindValue(1, $userID, PDO::PARAM_INT);
@@ -318,9 +320,14 @@ final class Handler
             }
 
             // ボーナス進捗更新
+            // ループしながらユーザーにログボを配っている(おそらくログインするたび)
+            // 初回ログインユーザーはlastRewardSequenceが0だから必ずこの分岐に入る
             if ($userBonus->lastRewardSequence < $bonus->columnCount) {
                 $userBonus->lastRewardSequence++;
-            } else {
+            }
+            // 初回ユーザーではなく、かつuser_login_bonuses.last_reward_sequence<login_bonus_masters.column_countの場合
+            else {
+                // loopedはAdminHandler.phpで設定している
                 if ($bonus->looped) {
                     $userBonus->loopCount += 1;
                     $userBonus->lastRewardSequence = 1;
@@ -343,9 +350,11 @@ final class Handler
             }
             $rewardItem = LoginBonusRewardMaster::fromDBRow($row);
 
+            // 1.usersにコイン、2.user_cardsにカード(ハンマー)、4.user_itemsに強化素材を付与する処理。itemType=3は何もしてない
             $this->obtainItem($userID, $rewardItem->itemID, $rewardItem->itemType, $rewardItem->amount, $requestAt);
 
             // 進捗の保存
+            // user_login_bonusesにレコードがないユーザー(初ログインのユーザー)の場合
             if ($initBonus) {
                 $query = 'INSERT INTO user_login_bonuses(id, user_id, login_bonus_id, last_reward_sequence, loop_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)';
                 $stmt = $this->db->prepare($query);
