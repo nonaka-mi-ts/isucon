@@ -297,7 +297,6 @@ final class Handler
 
             $initBonus = false;
             // ボーナスの進捗取得
-            // $bonus=1のものしかuser_login_bonusesにはない
             $query = 'SELECT * FROM user_login_bonuses WHERE user_id=? AND login_bonus_id=?';
             $stmt = $this->db->prepare($query);
             $stmt->bindValue(1, $userID, PDO::PARAM_INT);
@@ -342,33 +341,52 @@ final class Handler
             // ログインボーナス付与
             $this->loginBonusGranted($userID, $requestAt, $bonus->id, $userBonus->lastRewardSequence);
 
-            // 進捗の保存
-            // user_login_bonusesにレコードがないユーザー(初ログイン？ボーナスを1つも持っていないユーザー)の場合
             if ($initBonus) {
-                $query = 'INSERT INTO user_login_bonuses(id, user_id, login_bonus_id, last_reward_sequence, loop_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)';
-                $stmt = $this->db->prepare($query);
-                $stmt->bindValue(1, $userBonus->id, PDO::PARAM_INT);
-                $stmt->bindValue(2, $userBonus->userID, PDO::PARAM_INT);
-                $stmt->bindValue(3, $userBonus->loginBonusID, PDO::PARAM_INT);
-                $stmt->bindValue(4, $userBonus->lastRewardSequence, PDO::PARAM_INT);
-                $stmt->bindValue(5, $userBonus->loopCount, PDO::PARAM_INT);
-                $stmt->bindValue(6, $userBonus->createdAt, PDO::PARAM_INT);
-                $stmt->bindValue(7, $userBonus->updatedAt, PDO::PARAM_INT);
-                $stmt->execute();
+                $this->saveProgress1($userBonus);
             } else {
-                $query = 'UPDATE user_login_bonuses SET last_reward_sequence=?, loop_count=?, updated_at=? WHERE id=?';
-                $stmt = $this->db->prepare($query);
-                $stmt->bindValue(1, $userBonus->lastRewardSequence, PDO::PARAM_INT);
-                $stmt->bindValue(2, $userBonus->loopCount, PDO::PARAM_INT);
-                $stmt->bindValue(3, $userBonus->updatedAt, PDO::PARAM_INT);
-                $stmt->bindValue(4, $userBonus->id, PDO::PARAM_INT);
-                $stmt->execute();
+                $this->saveProgress2($userBonus);
             }
 
-            $sendLoginBonuses[] = $userBonus;
+            $sendLoginBonuses = $userBonus;
+
         }
 
         return $sendLoginBonuses;
+    }
+
+    /**
+     * saveProgress 進捗保存
+     */
+    private function saveProgress1($userBonus)
+    {
+        // 進捗の保存
+        // user_login_bonusesにレコードがないユーザー(初ログイン？ボーナスを1つも持っていないユーザー)の場合
+        $query = 'INSERT INTO user_login_bonuses(id, user_id, login_bonus_id, last_reward_sequence, loop_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)';
+        $stmt = $this->db->prepare($query);
+        $stmt->bindValue(1, $userBonus->id, PDO::PARAM_INT);
+        $stmt->bindValue(2, $userBonus->userID, PDO::PARAM_INT);
+        $stmt->bindValue(3, $userBonus->loginBonusID, PDO::PARAM_INT);
+        $stmt->bindValue(4, $userBonus->lastRewardSequence, PDO::PARAM_INT);
+        $stmt->bindValue(5, $userBonus->loopCount, PDO::PARAM_INT);
+        $stmt->bindValue(6, $userBonus->createdAt, PDO::PARAM_INT);
+        $stmt->bindValue(7, $userBonus->updatedAt, PDO::PARAM_INT);
+        $stmt->execute();
+    }
+
+    /**
+     * saveProgress 進捗保存
+     */
+    private function saveProgress2($userBonus)
+    {
+        // 進捗の保存
+        // user_login_bonusesにレコードがないユーザー(初ログイン？ボーナスを1つも持っていないユーザー)の場合
+        $query = 'UPDATE user_login_bonuses SET last_reward_sequence=?, loop_count=?, updated_at=? WHERE id=?';
+        $stmt = $this->db->prepare($query);
+        $stmt->bindValue(1, $userBonus->lastRewardSequence, PDO::PARAM_INT);
+        $stmt->bindValue(2, $userBonus->loopCount, PDO::PARAM_INT);
+        $stmt->bindValue(3, $userBonus->updatedAt, PDO::PARAM_INT);
+        $stmt->bindValue(4, $userBonus->id, PDO::PARAM_INT);
+        $stmt->execute();
     }
 
     /**
