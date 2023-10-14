@@ -342,11 +342,6 @@ final class Handler
             // ログインボーナス付与
             $this->loginBonusGranted($userID, $requestAt, $bonus->id, $userBonus->lastRewardSequence);
 
-            // id=3のログインボーナスは実質何もしない
-            if($bonus->id = 3) {
-                continue;
-            }
-
             // 進捗の保存
             // user_login_bonusesにレコードがないユーザー(初ログイン？ボーナスを1つも持っていないユーザー)の場合
             if ($initBonus) {
