@@ -294,6 +294,12 @@ final class Handler
 
         //  login_bonusは4つ=4ループする
         foreach ($loginBonuses as $bonus) {
+
+            // id=3のログインボーナスは実質何もしない
+            if($bonus->id = 3) {
+                continue;
+            }
+
             $initBonus = false;
             // ボーナスの進捗取得
             // $bonus=1のものしかuser_login_bonusesにはない
