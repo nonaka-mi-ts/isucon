@@ -338,20 +338,8 @@ final class Handler
             }
             $userBonus->updatedAt = $requestAt;
 
-            // 今回付与するリソース取得
-            $query = 'SELECT * FROM login_bonus_reward_masters WHERE login_bonus_id=? AND reward_sequence=?';
-            $stmt = $this->db->prepare($query);
-            $stmt->bindValue(1, $bonus->id, PDO::PARAM_INT);
-            $stmt->bindValue(2, $userBonus->lastRewardSequence, PDO::PARAM_INT);
-            $stmt->execute();
-            $row = $stmt->fetch();
-            if ($row === false) {
-                throw new RuntimeException($this->errLoginBonusRewardNotFound);
-            }
-            $rewardItem = LoginBonusRewardMaster::fromDBRow($row);
-
-            // 1.usersにコイン、2.user_cardsにカード(ハンマー)、4.user_itemsに強化素材を付与する処理。itemType=3は何もしてない
-            $this->obtainItem($userID, $rewardItem->itemID, $rewardItem->itemType, $rewardItem->amount, $requestAt);
+            // ログインボーナス付与
+            $this->loginBonusGranted($userID, $requestAt, $bonus->id, $userBonus->lastRewardSequence);
 
             // 進捗の保存
             // user_login_bonusesにレコードがないユーザー(初ログインのユーザー)の場合
@@ -380,6 +368,26 @@ final class Handler
         }
 
         return $sendLoginBonuses;
+    }
+
+    /**
+     * loginBonusGranted ログインボーナス付与
+     */
+    private function loginBonusGranted($userID, $requestAt, $bonusId, $userBonusLastRewardSequence)
+    {
+        // 今回付与するリソース取得
+        $query = 'SELECT * FROM login_bonus_reward_masters WHERE login_bonus_id=? AND reward_sequence=?';
+        $stmt = $this->db->prepare($query);
+        $stmt->bindValue(1, $bonusId, PDO::PARAM_INT);
+        $stmt->bindValue(2, $userBonusLastRewardSequence, PDO::PARAM_INT);
+        $stmt->execute();
+        $row = $stmt->fetch();
+        if ($row === false) {
+            throw new RuntimeException($this->errLoginBonusRewardNotFound);
+        }
+        $rewardItem = LoginBonusRewardMaster::fromDBRow($row);
+        // 1.usersにコイン、2.user_cardsにカード(ハンマー)、4.user_itemsに強化素材を付与する処理。$rewardItem->itemType=3は何もしてない
+        $this->obtainItem($userID, $rewardItem->itemID, $rewardItem->itemType, $rewardItem->amount, $requestAt);
     }
 
     /**
