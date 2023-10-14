@@ -341,13 +341,14 @@ final class Handler
             // ログインボーナス付与
             $this->loginBonusGranted($userID, $requestAt, $bonus->id, $userBonus->lastRewardSequence);
 
+            // 進捗の保存
             if ($initBonus) {
                 $this->saveProgress1($userBonus);
             } else {
                 $this->saveProgress2($userBonus);
             }
 
-            $sendLoginBonuses = $userBonus;
+            $sendLoginBonuses[] = $userBonus;
 
         }
 
