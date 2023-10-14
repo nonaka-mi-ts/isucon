@@ -295,11 +295,6 @@ final class Handler
         //  login_bonusは4つ=4ループする
         foreach ($loginBonuses as $bonus) {
 
-//            // id=3のログインボーナスは実質何もしない
-//            if($bonus->id = 3) {
-//                continue;
-//            }
-
             $initBonus = false;
             // ボーナスの進捗取得
             // $bonus=1のものしかuser_login_bonusesにはない
@@ -346,6 +341,11 @@ final class Handler
 
             // ログインボーナス付与
             $this->loginBonusGranted($userID, $requestAt, $bonus->id, $userBonus->lastRewardSequence);
+
+            // id=3のログインボーナスは実質何もしない
+            if($bonus->id = 3) {
+                continue;
+            }
 
             // 進捗の保存
             // user_login_bonusesにレコードがないユーザー(初ログイン？ボーナスを1つも持っていないユーザー)の場合
