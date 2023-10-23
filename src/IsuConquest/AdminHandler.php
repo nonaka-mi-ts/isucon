@@ -691,7 +691,7 @@ final class AdminHandler
         }
 
         try {
-            $row = $this->db->query('SELECT * FROM version_masters WHERE status=1')
+            $row = $this->db->query('SELECT id, status, master_version FROM version_masters WHERE status=1')
                 ->fetch();
         } catch (PDOException $e) {
             throw new HttpInternalServerErrorException($request, $e->getMessage(), $e);
@@ -746,7 +746,7 @@ final class AdminHandler
             throw new HttpBadRequestException($request, $e->getMessage(), $e);
         }
 
-        $query = 'SELECT * FROM users WHERE id=?';
+        $query = 'SELECT id, isu_coin, last_getreward_at,last_activated_at, registered_at, created_at, updated_at, deleted_at  FROM users WHERE id=?';
         try {
             $stmt = $this->db->prepare($query);
             $stmt->bindValue(1, $userID, PDO::PARAM_INT);

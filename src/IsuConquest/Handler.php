@@ -292,7 +292,9 @@ final class Handler
         /** @var list<UserLoginBonus> $sendLoginBonuses */
         $sendLoginBonuses = [];
 
+        //  login_bonusは4つ=4ループする
         foreach ($loginBonuses as $bonus) {
+
             $initBonus = false;
             // ボーナスの進捗取得
             $query = 'SELECT * FROM user_login_bonuses WHERE user_id=? AND login_bonus_id=?';
@@ -318,9 +320,14 @@ final class Handler
             }
 
             // ボーナス進捗更新
+            // ループしながらユーザーにログボを配っている(おそらくログインするたび)
+            // 初回ログインユーザーはlastRewardSequenceが0だから必ずこの分岐に入る
             if ($userBonus->lastRewardSequence < $bonus->columnCount) {
                 $userBonus->lastRewardSequence++;
-            } else {
+            }
+            // 初回ユーザーではなく、かつuser_login_bonuses.last_reward_sequence<login_bonus_masters.column_countの場合
+            else {
+                // loopedはAdminHandler.phpで設定している
                 if ($bonus->looped) {
                     $userBonus->loopCount += 1;
                     $userBonus->lastRewardSequence = 1;
@@ -331,46 +338,76 @@ final class Handler
             }
             $userBonus->updatedAt = $requestAt;
 
-            // 今回付与するリソース取得
-            $query = 'SELECT * FROM login_bonus_reward_masters WHERE login_bonus_id=? AND reward_sequence=?';
-            $stmt = $this->db->prepare($query);
-            $stmt->bindValue(1, $bonus->id, PDO::PARAM_INT);
-            $stmt->bindValue(2, $userBonus->lastRewardSequence, PDO::PARAM_INT);
-            $stmt->execute();
-            $row = $stmt->fetch();
-            if ($row === false) {
-                throw new RuntimeException($this->errLoginBonusRewardNotFound);
-            }
-            $rewardItem = LoginBonusRewardMaster::fromDBRow($row);
-
-            $this->obtainItem($userID, $rewardItem->itemID, $rewardItem->itemType, $rewardItem->amount, $requestAt);
+            // ログインボーナス付与
+            $this->loginBonusGranted($userID, $requestAt, $bonus->id, $userBonus->lastRewardSequence);
 
             // 進捗の保存
             if ($initBonus) {
-                $query = 'INSERT INTO user_login_bonuses(id, user_id, login_bonus_id, last_reward_sequence, loop_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)';
-                $stmt = $this->db->prepare($query);
-                $stmt->bindValue(1, $userBonus->id, PDO::PARAM_INT);
-                $stmt->bindValue(2, $userBonus->userID, PDO::PARAM_INT);
-                $stmt->bindValue(3, $userBonus->loginBonusID, PDO::PARAM_INT);
-                $stmt->bindValue(4, $userBonus->lastRewardSequence, PDO::PARAM_INT);
-                $stmt->bindValue(5, $userBonus->loopCount, PDO::PARAM_INT);
-                $stmt->bindValue(6, $userBonus->createdAt, PDO::PARAM_INT);
-                $stmt->bindValue(7, $userBonus->updatedAt, PDO::PARAM_INT);
-                $stmt->execute();
+                $this->saveProgress1($userBonus);
             } else {
-                $query = 'UPDATE user_login_bonuses SET last_reward_sequence=?, loop_count=?, updated_at=? WHERE id=?';
-                $stmt = $this->db->prepare($query);
-                $stmt->bindValue(1, $userBonus->lastRewardSequence, PDO::PARAM_INT);
-                $stmt->bindValue(2, $userBonus->loopCount, PDO::PARAM_INT);
-                $stmt->bindValue(3, $userBonus->updatedAt, PDO::PARAM_INT);
-                $stmt->bindValue(4, $userBonus->id, PDO::PARAM_INT);
-                $stmt->execute();
+                $this->saveProgress2($userBonus);
             }
 
             $sendLoginBonuses[] = $userBonus;
+
         }
 
         return $sendLoginBonuses;
+    }
+
+    /**
+     * saveProgress 進捗保存
+     */
+    private function saveProgress1($userBonus)
+    {
+        // 進捗の保存
+        // user_login_bonusesにレコードがないユーザー(初ログイン？ボーナスを1つも持っていないユーザー)の場合
+        $query = 'INSERT INTO user_login_bonuses(id, user_id, login_bonus_id, last_reward_sequence, loop_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)';
+        $stmt = $this->db->prepare($query);
+        $stmt->bindValue(1, $userBonus->id, PDO::PARAM_INT);
+        $stmt->bindValue(2, $userBonus->userID, PDO::PARAM_INT);
+        $stmt->bindValue(3, $userBonus->loginBonusID, PDO::PARAM_INT);
+        $stmt->bindValue(4, $userBonus->lastRewardSequence, PDO::PARAM_INT);
+        $stmt->bindValue(5, $userBonus->loopCount, PDO::PARAM_INT);
+        $stmt->bindValue(6, $userBonus->createdAt, PDO::PARAM_INT);
+        $stmt->bindValue(7, $userBonus->updatedAt, PDO::PARAM_INT);
+        $stmt->execute();
+    }
+
+    /**
+     * saveProgress 進捗保存
+     */
+    private function saveProgress2($userBonus)
+    {
+        // 進捗の保存
+        // user_login_bonusesにレコードがないユーザー(初ログイン？ボーナスを1つも持っていないユーザー)の場合
+        $query = 'UPDATE user_login_bonuses SET last_reward_sequence=?, loop_count=?, updated_at=? WHERE id=?';
+        $stmt = $this->db->prepare($query);
+        $stmt->bindValue(1, $userBonus->lastRewardSequence, PDO::PARAM_INT);
+        $stmt->bindValue(2, $userBonus->loopCount, PDO::PARAM_INT);
+        $stmt->bindValue(3, $userBonus->updatedAt, PDO::PARAM_INT);
+        $stmt->bindValue(4, $userBonus->id, PDO::PARAM_INT);
+        $stmt->execute();
+    }
+
+    /**
+     * loginBonusGranted ログインボーナス付与
+     */
+    private function loginBonusGranted($userID, $requestAt, $bonusId, $userBonusLastRewardSequence)
+    {
+        // 今回付与するリソース取得
+        $query = 'SELECT * FROM login_bonus_reward_masters WHERE login_bonus_id=? AND reward_sequence=?';
+        $stmt = $this->db->prepare($query);
+        $stmt->bindValue(1, $bonusId, PDO::PARAM_INT);
+        $stmt->bindValue(2, $userBonusLastRewardSequence, PDO::PARAM_INT);
+        $stmt->execute();
+        $row = $stmt->fetch();
+        if ($row === false) {
+            throw new RuntimeException($this->errLoginBonusRewardNotFound);
+        }
+        $rewardItem = LoginBonusRewardMaster::fromDBRow($row);
+        // 1.usersにコイン、2.user_cardsにカード(ハンマー)、4.user_itemsに強化素材を付与する処理。$rewardItem->itemType=3は何もしてない
+        $this->obtainItem($userID, $rewardItem->itemID, $rewardItem->itemType, $rewardItem->amount, $requestAt);
     }
 
     /**

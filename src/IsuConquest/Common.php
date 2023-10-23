@@ -62,14 +62,20 @@ trait Common
     }
 
     /**
-     * generateID uniqueなIDを生成する
+     * generateID 100個のuniqueなIDを生成する
+     * セッションやBANに使用
+     * それ以外はハンドラー
+     *
      * @throws PDOException
      * @throws RuntimeException
      */
     private function generateID(): int
     {
         $hasNewTransaction = false;
+        // トランザクションないかどうか判定
+        // トランザクション内ではない場合
         if (!$this->db->inTransaction()) {
+            // トランザクションを貼る
             $this->db->beginTransaction();
             $hasNewTransaction = true;
         }
@@ -79,6 +85,7 @@ trait Common
             $updateErr = null;
             for ($i = 0; $i < 100; $i++) {
                 try {
+                    // id_generatorテーブルの
                     $this->db->exec('UPDATE id_generator SET id=LAST_INSERT_ID(id+1)');
                 } catch (PDOException $e) {
                     if ($e->getCode() === 1213) {
@@ -88,6 +95,7 @@ trait Common
                     throw $e;
                 }
 
+                // 新しいID
                 $id =  $this->db->lastInsertId();
                 if ($id === false) {
                     throw new RuntimeException('failed to generate id: ', $this->db->errorInfo()[2]);
