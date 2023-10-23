@@ -21,7 +21,7 @@ return function (ContainerBuilder $containerBuilder) {
                     'level' => LogLevel::Debug,
                 ],
                 'database' => [
-                    'host' => getenv('ISUCON_DB_HOST') ?: '192.168.1.13',
+                    'host' => '192.168.1.13',
                     'database' => getenv('ISUCON_DB_NAME') ?: 'isucon',
                     'port' => getenv('ISUCON_DB_PORT') ?: '3306',
                     'user' => getenv('ISUCON_DB_USER') ?: 'isucon',
